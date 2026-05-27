@@ -1,6 +1,8 @@
 import random
 import matplotlib.pyplot as plt
 
+GLOBAL_LOW = -5
+GLOBAL_HIGH = 10
 
 def generate_values(given_ranges): 
     matrix = [] 
@@ -54,7 +56,10 @@ def calcProb(values):
             lo = new_values[i][j] - ranges / 2
             hi = new_values[i][j] + ranges / 2
             
-            lo = max(lo, given_ranges[i][j][0])  
+            lo = max(lo, GLOBAL_LOW)
+            hi = min(hi, GLOBAL_HIGH)
+
+            lo = max(lo, given_ranges[i][j][0])
             hi = min(hi, given_ranges[i][j][1])  
             
             if lo < hi:  
@@ -85,7 +90,7 @@ for i in range(500):
     #display(values)
     #print("\n\n")
     solveSphere(values)
-    values = calcProb(values)
+    calcProb(values)
     ranges = redRange(reductionFactor, ranges)
 
 for i in range(len(funcValues_all)):
