@@ -22,32 +22,38 @@ def display(values):
 def redRange(reductionFactor, ranges):
     return reductionFactor * ranges
    
-def solveSphere(values):
+def solveRosenbrock(values):
+
     funcValues.clear()
+
     for i in range(candidates):
-        funcValues.append(values[i][0]**2 + values[i][1]**2)
+
+        x = values[i][0]
+        y = values[i][1]
+
+        value = 100 * (x**2 - y)**2 + (x - 1)**2
+
+        funcValues.append(value)
+
     funcValues_all.append(funcValues[:])
     
 
 def calcProb(values):
-    probsum = sum(1 / (f + 1e-12) for f in funcValues)
-    probs = []
-    cumulative = 0
-
-    for f in funcValues:
-        cumulative += (1 / (f + 1e-12)) / probsum
-        probs.append(cumulative)
+    probsum = (1/funcValues[0]) + (1/funcValues[1]) + (1/funcValues[2])
+    p1 = (1/funcValues[0]) / probsum
+    p2 = (1/funcValues[1]) / probsum + p1
+    p3 = (1/funcValues[2]) / probsum + p2
     
     new_values = [None] * candidates
     
     for i in range(candidates):
-
         c = random.uniform(0, 1)
-
-        for j in range(candidates):
-            if c < probs[j]:
-                new_values[i] = values[j]
-                break
+        if c < p1:
+            new_values[i] = values[0]
+        elif c < p2:
+            new_values[i] = values[1]
+        else:
+            new_values[i] = values[2]
     
     for i in range(candidates):
         for j in range(2):
@@ -55,7 +61,7 @@ def calcProb(values):
             hi = new_values[i][j] + ranges / 2
             
             lo = max(lo, given_ranges[i][j][0])  
-            hi = min(hi, given_ranges[i][j][1])  
+            hi = min(hi, given_ranges[i][j][1]) 
             
             if lo < hi:  
                 given_ranges[i][j][0] = lo
@@ -74,7 +80,7 @@ funcValues = []
 funcValues_all = []
 
 for i in range(candidates):
-    given_ranges.append([[-5.12, 5.12], [-5.12, 5.12]])
+    given_ranges.append([[-5, 10], [-5, 10]])
 
 for i in range(100):
     values = generate_values(given_ranges)
@@ -82,7 +88,7 @@ for i in range(100):
     print(values,"\n\n")
     #display(values)
     #print("\n\n")
-    solveSphere(values)
+    solveRosenbrock(values)
     calcProb(values)
     ranges = redRange(reductionFactor, ranges)
 
