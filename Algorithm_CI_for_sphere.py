@@ -62,7 +62,9 @@ def calcProb(values):
                 given_ranges[i][j][1] = hi
             new_values[i][j] = max(given_ranges[i][j][0],
                                    min(new_values[i][j], given_ranges[i][j][1]))
-
+    return new_values
+    
+    
 # main       
 candidates = int(input("enter number of candidates : "))
 reductionFactor = float(input("enter reduction factor : "))
@@ -76,14 +78,14 @@ funcValues_all = []
 for i in range(candidates):
     given_ranges.append([[-5.12, 5.12], [-5.12, 5.12]])
 
-for i in range(100):
+for i in range(500):
     values = generate_values(given_ranges)
     print("candidate x1 x2")
     print(values,"\n\n")
     #display(values)
     #print("\n\n")
     solveSphere(values)
-    calcProb(values)
+    values = calcProb(values)
     ranges = redRange(reductionFactor, ranges)
 
 for i in range(len(funcValues_all)):
