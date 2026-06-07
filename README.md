@@ -1,0 +1,1 @@
+https://www.researchgate.net/publication/262285087_Cohort_Intelligence_A_Self_Supervised_Learning_Behavior
