@@ -92,7 +92,7 @@ funcValues_all = []
 for i in range(candidates):
     given_ranges.append([[-5,10],[-5,10]])
 
-for i in range(100):
+for i in range(500):
     values = generate_values(given_ranges)
     print(f"Iteration {i+1} - candidate x1 x2")
     print(values,"\n\n")

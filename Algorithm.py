@@ -1,105 +1,154 @@
 import random
-import matplotlib.pyplot as plt
 
-GLOBAL_LOW = -5
-GLOBAL_HIGH = 10
+def generate_values(given_ranges):
+    matrix = []
 
-def generate_values(given_ranges): 
-    matrix = [] 
-    for i in range(len(given_ranges)):
+    for candidate_range in given_ranges:
+
         row = []
-        for j in range(2):
-            low = given_ranges[i][j][0]
-            high = given_ranges[i][j][1]
-            value = random.uniform(low, high)
-            value = max(low, min(value, high))
-            row.append(value)
+
+        for low, high in candidate_range:
+            row.append(random.uniform(low, high))
+
         matrix.append(row)
+
     return matrix
-    
-def display(values):
-    for i, row in enumerate(values):
-        print(f"{i+1}: {row}")
-        
-def redRange(reductionFactor, ranges):
-    return reductionFactor * ranges
+
+
+def reduce_range(reduction_factor, current_range):
+    return reduction_factor * current_range
+
+
+def evaluate_population(values, objective):
+    return [objective(*v) for v in values]
+
+# *v in Python is called the unpacking operator (or “splat operator”).
+# It means:
+# “Take the elements inside v and pass them as separate arguments.”
    
-def solve(values):
-    #function    
 
-def calcProb(values):
-    probsum = sum(1 / (f + 1e-12) for f in funcValues)
-    probs = []
-    cumulative = 0
+def roulette_selection(
+        values,
+        fitness,
+        given_ranges,
+        range_width,
+        lower_bounds,
+        upper_bounds):
 
-    for f in funcValues:
-        cumulative += (1 / (f + 1e-12)) / probsum
-        probs.append(cumulative)
-    
-    new_values = [None] * candidates
-    
-    for i in range(candidates):
+    eps = 1e-6
 
-        c = random.uniform(0, 1)
+    fmin = min(fitness)
 
-        for j in range(candidates):
-            if c < probs[j]:
+    shifted = [f - fmin + eps for f in fitness]
+
+    weights = [1 / f for f in shifted]
+
+    total_weight = sum(weights)
+
+    cumulative = []
+
+    s = 0
+
+    for w in weights:
+        s += w / total_weight
+        cumulative.append(s)
+
+    new_values = [None] * len(values)
+
+    for i in range(len(values)):
+
+        r = random.uniform(0, 1)
+
+        for j in range(len(values)):
+            if r < cumulative[j]:
                 new_values[i] = values[j][:]
                 break
-    
-    for i in range(candidates):
-        for j in range(2):
-            lo = new_values[i][j] - ranges / 2
-            hi = new_values[i][j] + ranges / 2
-            
-            lo = max(lo, GLOBAL_LOW)
-            hi = min(hi, GLOBAL_HIGH)
+
+    # shrink ranges
+    for i in range(len(values)):
+
+        for j in range(len(range_width)):
+
+            lo = new_values[i][j] - range_width[j] / 2
+            hi = new_values[i][j] + range_width[j] / 2
+
+            lo = max(lo, lower_bounds[j])
+            hi = min(hi, upper_bounds[j])
 
             lo = max(lo, given_ranges[i][j][0])
-            hi = min(hi, given_ranges[i][j][1])   
-            
-            if lo < hi:  
+            hi = min(hi, given_ranges[i][j][1])
+
+            if lo < hi:
                 given_ranges[i][j][0] = lo
                 given_ranges[i][j][1] = hi
-            new_values[i][j] = max(given_ranges[i][j][0],
-                                   min(new_values[i][j], given_ranges[i][j][1]))
+
     return new_values
+
+
+def CI(
+        objective,
+        candidates,
+        iterations,
+        reduction_factor,
+        lower_bounds,
+        upper_bounds,
+        initial_ranges):
+
+    given_ranges = [
+        [[r[0], r[1]] for r in initial_ranges]
+        for _ in range(candidates)
+    ]
+
+
+    range_width = [
+        r[1] - r[0]
+        for r in initial_ranges
+    ]
+
+    history = []
+    population_history = []
+
+    for _ in range(iterations):
+
+        values = generate_values(given_ranges)
+        population_history.append([v[:] for v in values])
+
+        fitness = evaluate_population(values, objective)
+
+        history.append(fitness[:])
+
+        values = roulette_selection(
+            values,
+            fitness,
+            given_ranges,
+            range_width,
+            lower_bounds,
+            upper_bounds
+        )
+
+        for j in range(len(range_width)):
+            range_width[j] = max(
+                1e-6,
+                reduce_range(reduction_factor,
+                             range_width[j])
+            )
+
+    return history, population_history
     
     
-# main       
-candidates = int(input("enter number of candidates : "))
-reductionFactor = float(input("enter reduction factor : "))
+def check_constraints(population_history, lower_bounds, upper_bounds):
+    violations = 0
 
-given_ranges = []
-ranges = 15
+    for iteration in population_history:
+        for candidate in iteration:
+            for j, x in enumerate(candidate):
 
-funcValues = []
-funcValues_all = []
+                if x < lower_bounds[j] or x > upper_bounds[j]:
+                    violations += 1
+                    print(f"Violation: x{j+1} = {x}")
 
-for i in range(candidates):
-    given_ranges.append([[-5,10],[-5,10]])
+    if violations == 0:
+        print("\nAll constraints satisfied!")
+    else:
+        print(f"\nTotal violations: {violations}")
 
-for i in range(100):
-    values = generate_values(given_ranges)
-    print(f"Iteration {i+1} - candidate x1 x2")
-    print(values,"\n\n")
-    #display(values)
-    #print("\n\n")
-    solveRosenbrock(values)
-    calcProb(values)
-    ranges = max(1e-6, redRange(reductionFactor, ranges))
-
-for i in range(len(funcValues_all)):
-    print(funcValues_all[i])
-    
-for c in range(candidates):
-    candidate_fitness = [funcValues_all[i][c] for i in range(len(funcValues_all))]
-    plt.plot(range(1, len(funcValues_all) + 1), candidate_fitness)
-
-plt.title("CI — Fitness of Each Candidate per Iteration")
-plt.xlabel("Iteration")
-plt.ylabel("Fitness f(x, y)")
-plt.legend()
-plt.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.show()

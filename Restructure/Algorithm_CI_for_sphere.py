@@ -1,8 +1,8 @@
 import random
 import matplotlib.pyplot as plt
 
-GLOBAL_LOW = -5
-GLOBAL_HIGH = 10
+GLOBAL_LOW = -5.12
+GLOBAL_HIGH = 5.12
 
 def generate_values(given_ranges): 
     matrix = [] 
@@ -48,7 +48,7 @@ def calcProb(values):
 
         for j in range(candidates):
             if c < probs[j]:
-                new_values[i] = values[j]
+                new_values[i] = values[j][:]
                 break
     
     for i in range(candidates):
