@@ -1,15 +1,15 @@
 #sphere function 
-def sphere(x1, x2):
-    return x1**2 + x2**2
+def sphere(x1, x2, x3):
+    return x1**2 + x2**2 + x3**2
 
 
 SPHERE = {
     "name": "Sphere",
     "function": sphere,
-    "lower_bounds": [-5.12, -5.12],
-    "upper_bounds": [5.12, 5.12],
+    "lower_bounds": [-5.12, -5.12,-5.12],
+    "upper_bounds": [5.12, 5.12,5,12],
     "global_minimum": 0.0,
-    "global_argmin": [0, 0]
+    "global_argmin": [0, 0, 0]
 }
 
 #rosenbrock 

@@ -35,13 +35,17 @@ def roulette_selection(
         lower_bounds,
         upper_bounds):
 
-    eps = 1e-6
+    eps = 1e-6  #to avoid division by 0
 
     fmin = min(fitness)
 
-    shifted = [f - fmin + eps for f in fitness]
-
-    weights = [1 / f for f in shifted]
+    alpha = 1
+    
+    shifted = [f - fmin for f in fitness]
+    weights = [1 / (1 + alpha * f) for f in shifted]
+    
+    # shifted = [f - fmin + 1e-6 for f in fitness]
+    # weights = [1 / f for f in shifted]
 
     total_weight = sum(weights)
 
@@ -94,29 +98,42 @@ def CI(
         upper_bounds,
         initial_ranges):
 
+    #initialisation of ranges 
     given_ranges = [
         [[r[0], r[1]] for r in initial_ranges]
         for _ in range(candidates)
     ]
 
-
+    #initalisation of range width for reduction 
     range_width = [
         r[1] - r[0]
         for r in initial_ranges
     ]
 
+    #saves function and candidate values respectively
     history = []
     population_history = []
 
+    
     for _ in range(iterations):
 
+        # randomly generate values from given_ranges and save them
         values = generate_values(given_ranges)
         population_history.append([v[:] for v in values])
 
+        #evaluate function values and saves them
         fitness = evaluate_population(values, objective)
-
         history.append(fitness[:])
 
+        #range reduction
+        for j in range(len(range_width)):
+            range_width[j] = max(
+                1e-6,
+                reduce_range(reduction_factor,
+                             range_width[j])
+            )
+
+        #roullete wheel and candidate selection
         values = roulette_selection(
             values,
             fitness,
@@ -125,13 +142,6 @@ def CI(
             lower_bounds,
             upper_bounds
         )
-
-        for j in range(len(range_width)):
-            range_width[j] = max(
-                1e-6,
-                reduce_range(reduction_factor,
-                             range_width[j])
-            )
 
     return history, population_history
     

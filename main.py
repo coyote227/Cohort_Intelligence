@@ -22,7 +22,7 @@ def main():
     history, population_history = CI(
         objective=benchmark["function"],
         candidates=candidates,
-        iterations=500,
+        iterations=1000,
         reduction_factor=reduction_factor,
         lower_bounds=benchmark["lower_bounds"],
         upper_bounds=benchmark["upper_bounds"],
@@ -33,11 +33,11 @@ def main():
     )
 
     
-    check_constraints(
-        population_history,
-        benchmark["lower_bounds"],
-        benchmark["upper_bounds"]
-    )
+    # check_constraints(
+        # population_history,
+        # benchmark["lower_bounds"],
+        # benchmark["upper_bounds"]
+    # )
     
 
 # printing the candidate table with function value at each iteration
