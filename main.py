@@ -1,10 +1,10 @@
 import matplotlib.pyplot as plt
 from algorithm import CI,check_constraints
-from benchmark import SPHERE,ROSENBROCK,G6 
+from benchmark import SPHERE,ROSENBROCK,G6,ACKLEY,G11,G12
 
 # selection of the benchmarking function 
 
-benchmarks = [SPHERE,ROSENBROCK,G6]
+benchmarks = [SPHERE,ROSENBROCK,ACKLEY,G6,G11,G12]
 
 print("Select benchmark:")
 for i, b in enumerate(benchmarks, 1):
@@ -22,7 +22,7 @@ def main():
     history, population_history = CI(
         objective=benchmark["function"],
         candidates=candidates,
-        iterations=1000,
+        iterations= 3500,
         reduction_factor=reduction_factor,
         lower_bounds=benchmark["lower_bounds"],
         upper_bounds=benchmark["upper_bounds"],
@@ -33,11 +33,11 @@ def main():
     )
 
     
-    # check_constraints(
-        # population_history,
-        # benchmark["lower_bounds"],
-        # benchmark["upper_bounds"]
-    # )
+    check_constraints(
+        population_history,
+        benchmark["lower_bounds"],
+        benchmark["upper_bounds"]
+    )
     
 
 # printing the candidate table with function value at each iteration

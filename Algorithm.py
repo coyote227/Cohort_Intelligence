@@ -1,4 +1,5 @@
 import random
+import math
 
 def generate_values(given_ranges):
     matrix = []
@@ -38,15 +39,28 @@ def roulette_selection(
     eps = 1e-6  #to avoid division by 0
 
     fmin = min(fitness)
-
-    alpha = 1
     
-    shifted = [f - fmin for f in fitness]
-    weights = [1 / (1 + alpha * f) for f in shifted]
+    spread = max(fitness) - min(fitness)
+
+    if spread > 0:
+        alpha = 10 / spread
+    else:
+        alpha = 1
+
+    weights = [
+        1 / (1 + alpha * (f - fmin))
+        for f in fitness
+    ]
+    
+    # fmin = min(fitness)
+
+    # shifted = [f - fmin for f in fitness]
+    # weights = [1 / (1 + f) for f in shifted]
     
     # shifted = [f - fmin + 1e-6 for f in fitness]
     # weights = [1 / f for f in shifted]
 
+    
     total_weight = sum(weights)
 
     cumulative = []
@@ -121,19 +135,11 @@ def CI(
         values = generate_values(given_ranges)
         population_history.append([v[:] for v in values])
 
-        #evaluate function values and saves them
+        # evaluate function values and save them
         fitness = evaluate_population(values, objective)
         history.append(fitness[:])
 
-        #range reduction
-        for j in range(len(range_width)):
-            range_width[j] = max(
-                1e-6,
-                reduce_range(reduction_factor,
-                             range_width[j])
-            )
-
-        #roullete wheel and candidate selection
+        # roulette wheel and candidate selection
         values = roulette_selection(
             values,
             fitness,
@@ -142,6 +148,11 @@ def CI(
             lower_bounds,
             upper_bounds
         )
+
+        # reduce range width for the next iteration
+        for j in range(len(range_width)):
+            range_width[j] *= reduction_factor
+
 
     return history, population_history
     
