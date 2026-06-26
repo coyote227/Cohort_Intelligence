@@ -1,108 +1,128 @@
 import matplotlib.pyplot as plt
-from algorithm import CI,check_constraints
-from benchmark import SPHERE,ROSENBROCK,G6,ACKLEY,G11,G12
 
-# selection of the benchmarking function 
+from algorithm import CohortIntelligence
+from benchmark import (
+    sphere,
+    rosenbrock, 
+    ackley,
+    g1,
+    g4,
+    g6,
+    welded_beam,
+    pressure_vessel,
+    tension_compression_spring
+)
 
-benchmarks = [SPHERE,ROSENBROCK,ACKLEY,G6,G11,G12]
 
-print("Select benchmark:")
-for i, b in enumerate(benchmarks, 1):
-    print(f"{i}. {b['name']}")
+PROBLEMS = {
+    "SPHERE": sphere,
+    "ROSENBROCK": rosenbrock,
+    "ACKLEY": ackley,
+    "G1": g1,
+    "G4": g4,
+    "G6": g6,
+    "WB" :welded_beam,
+    "PV" : pressure_vessel,
+    "TCS" : tension_compression_spring
+}
 
-choice = int(input("benchmarking function: "))
-benchmark = benchmarks[choice - 1]
 
 
-def main():
+print("\nProblems:")
+for name in PROBLEMS:
+    print(f"  {name}")
 
-    candidates = int(input("Enter number of candidates: "))
-    reduction_factor = float(input("Enter reduction factor: "))
+problem_name = input("\nSelect: ").strip().upper()
 
-    history, population_history = CI(
-        objective=benchmark["function"],
-        candidates=candidates,
-        iterations= 3500,
-        reduction_factor=reduction_factor,
-        lower_bounds=benchmark["lower_bounds"],
-        upper_bounds=benchmark["upper_bounds"],
-        initial_ranges=list(zip(
-            benchmark["lower_bounds"],
-            benchmark["upper_bounds"])
-        )
+if problem_name not in PROBLEMS:
+    raise ValueError(f"Unknown problem: {problem_name}")
+
+
+if problem_name == "SPHERE" or problem_name == "ROSENBROCK" or problem_name == "ACKLEY":
+
+    n, lb, ub, objFun = sphere()
+
+    ci = CohortIntelligence(
+        obj_fun=objFun,
+        lb=lb,
+        ub=ub,
+        n=n,
+        population=200,
+        reduction=0.97,
+        max_iter=1000
     )
 
-    
-    check_constraints(
-        population_history,
-        benchmark["lower_bounds"],
-        benchmark["upper_bounds"]
+    best_x, best_f, history = ci.optimize()
+
+    print("Best Solution:")
+    print(best_x)
+    print(f"\nBest Function Value: {best_f:.10e}")
+
+else:
+
+    n, lb, ub, objFun, conFun, f_opt = PROBLEMS[problem_name]()
+
+    ci = CohortIntelligence(
+        obj_fun=objFun,
+        con_fun=conFun,
+        lb=lb,
+        ub=ub,
+        n=n,
+        population=7,
+        reduction=0.995,
+        max_iter=4500,
+        penalty_coeff=1e7
     )
-    
 
-# printing the candidate table with function value at each iteration
+    best_x, best_f, history = ci.optimize()
 
-#headers
-    for c in range(candidates):
+    print("Solution:")
+    print(best_x)
 
-        candidate_fitness = [
-            history[i][c]
-            for i in range(len(history))
-        ]
+    print(f"Objective Value   : {objFun(best_x):.10e}")
+    print(f"Known Optimum     : {f_opt:.10e}")
 
-        plt.plot(
-            range(1, len(history) + 1),
-            candidate_fitness,
-            label=f"C{c+1}"
+    print("\nConstraint Check")
+
+    gx = conFun(best_x)
+
+    feasible = True
+
+    for i, g in enumerate(gx):
+
+        satisfied = g <= 1e-5
+
+        if not satisfied:
+            feasible = False
+
+        status = "SATISFIED" if satisfied else "VIOLATED"
+
+        print(
+            f"g{i+1}(x) = {g:+.6e}  -->  {status}"
         )
+
+    print(
+        "\nFeasible Solution"
+        if feasible
+        else "\nInfeasible Solution"
+    )
         
 
-    dimensions = len(benchmark["lower_bounds"])
-
-    header = f"{'Iter':<6}{'Cand':<6}"
-
-    for dim in range(dimensions):
-        header += f"{f'x{dim+1}':<20}"
-
-    header += f"{'Fitness':<25}"
-
-    print(header)
-    print("-" * len(header))
 
 
-#values
-    dimensions = len(population_history[0][0])
+plt.figure(figsize=(9, 5))
 
-    for iteration in range(len(history)):
+plt.plot(
+    history,
+    color="steelblue",
+    linewidth=1.5
+)
 
-        for cand in range(candidates):
+plt.xlabel("Iteration")
+plt.ylabel("Best Fitness")
+plt.title(f"Convergence Plot - {problem_name}")
 
-            position = population_history[iteration][cand]
-            fitness = history[iteration][cand]
+plt.grid(True)
 
-            row = (
-                f"{iteration+1:<6}"
-                f"{cand+1:<6}"
-            )
-
-            for dim in range(dimensions):
-                row += f"{position[dim]:<25.10e}"
-
-            row += f"{fitness:<20.10e}"
-
-            print(row)
-
-        print("\n")
-
-    
-    
-
-    # plot graph
-    plt.title("CI Fitness per Iteration")
-    plt.xlabel("Iteration")
-    plt.ylabel("Fitness")
-    plt.show()
-
-
-if __name__ == "__main__":
-    main()
+plt.tight_layout()
+# plt.show()

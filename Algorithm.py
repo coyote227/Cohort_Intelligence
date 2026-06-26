@@ -1,175 +1,111 @@
-import random
-import math
-
-def generate_values(given_ranges):
-    matrix = []
-
-    for candidate_range in given_ranges:
-
-        row = []
-
-        for low, high in candidate_range:
-            row.append(random.uniform(low, high))
-
-        matrix.append(row)
-
-    return matrix
+import numpy as np
 
 
-def reduce_range(reduction_factor, current_range):
-    return reduction_factor * current_range
+class CohortIntelligence:
 
+    def __init__(
+        self,
+        obj_fun,
+        lb,
+        ub,
+        n,
+        population=200,
+        reduction=0.975,
+        max_iter=5000,
+        penalty_coeff=1e8,
+        con_fun=None
+    ):
 
-def evaluate_population(values, objective):
-    return [objective(*v) for v in values]
+        self.obj_fun = obj_fun
+        self.con_fun = con_fun
 
-# *v in Python is called the unpacking operator (or “splat operator”).
-# It means:
-# “Take the elements inside v and pass them as separate arguments.”
-   
+        self.lb = np.asarray(lb)
+        self.ub = np.asarray(ub)
 
-def roulette_selection(
-        values,
-        fitness,
-        given_ranges,
-        range_width,
-        lower_bounds,
-        upper_bounds):
+        self.n = n
+        self.C = population
+        self.R = reduction
+        self.max_iter = max_iter
+        self.penalty_coeff = penalty_coeff
 
-    eps = 1e-6  #to avoid division by 0
+    def evaluate(self, x):
 
-    fmin = min(fitness)
-    
-    spread = max(fitness) - min(fitness)
+        if self.con_fun is None:
+            return self.obj_fun(x)
 
-    if spread > 0:
-        alpha = 10 / spread
-    else:
-        alpha = 1
-
-    weights = [
-        1 / (1 + alpha * (f - fmin))
-        for f in fitness
-    ]
-    
-    # fmin = min(fitness)
-
-    # shifted = [f - fmin for f in fitness]
-    # weights = [1 / (1 + f) for f in shifted]
-    
-    # shifted = [f - fmin + 1e-6 for f in fitness]
-    # weights = [1 / f for f in shifted]
-
-    
-    total_weight = sum(weights)
-
-    cumulative = []
-
-    s = 0
-
-    for w in weights:
-        s += w / total_weight
-        cumulative.append(s)
-
-    new_values = [None] * len(values)
-
-    for i in range(len(values)):
-
-        r = random.uniform(0, 1)
-
-        for j in range(len(values)):
-            if r < cumulative[j]:
-                new_values[i] = values[j][:]
-                break
-
-    # shrink ranges
-    for i in range(len(values)):
-
-        for j in range(len(range_width)):
-
-            lo = new_values[i][j] - range_width[j] / 2
-            hi = new_values[i][j] + range_width[j] / 2
-
-            lo = max(lo, lower_bounds[j])
-            hi = min(hi, upper_bounds[j])
-
-            lo = max(lo, given_ranges[i][j][0])
-            hi = min(hi, given_ranges[i][j][1])
-
-            if lo < hi:
-                given_ranges[i][j][0] = lo
-                given_ranges[i][j][1] = hi
-
-    return new_values
-
-
-def CI(
-        objective,
-        candidates,
-        iterations,
-        reduction_factor,
-        lower_bounds,
-        upper_bounds,
-        initial_ranges):
-
-    #initialisation of ranges 
-    given_ranges = [
-        [[r[0], r[1]] for r in initial_ranges]
-        for _ in range(candidates)
-    ]
-
-    #initalisation of range width for reduction 
-    range_width = [
-        r[1] - r[0]
-        for r in initial_ranges
-    ]
-
-    #saves function and candidate values respectively
-    history = []
-    population_history = []
-
-    
-    for _ in range(iterations):
-
-        # randomly generate values from given_ranges and save them
-        values = generate_values(given_ranges)
-        population_history.append([v[:] for v in values])
-
-        # evaluate function values and save them
-        fitness = evaluate_population(values, objective)
-        history.append(fitness[:])
-
-        # roulette wheel and candidate selection
-        values = roulette_selection(
-            values,
-            fitness,
-            given_ranges,
-            range_width,
-            lower_bounds,
-            upper_bounds
+        penalty = np.sum(
+            np.maximum(0, self.con_fun(x))**2
         )
 
-        # reduce range width for the next iteration
-        for j in range(len(range_width)):
-            range_width[j] *= reduction_factor
+        return self.obj_fun(x) + self.penalty_coeff * penalty
 
+    def optimize(self):
 
-    return history, population_history
-    
-    
-def check_constraints(population_history, lower_bounds, upper_bounds):
-    violations = 0
+        range_ = (self.ub - self.lb).copy()
 
-    for iteration in population_history:
-        for candidate in iteration:
-            for j, x in enumerate(candidate):
+        x = self.lb + np.random.rand(self.C, self.n) * (
+            self.ub - self.lb
+        )
 
-                if x < lower_bounds[j] or x > upper_bounds[j]:
-                    violations += 1
-                    print(f"Violation: x{j+1} = {x}")
+        history = []
 
-    if violations == 0:
-        print("\nAll constraints satisfied!")
-    else:
-        print(f"\nTotal violations: {violations}")
+        for _ in range(self.max_iter):
 
+            fx = np.array(
+                [self.evaluate(candidate) for candidate in x]
+            )
+
+            history.append(np.min(fx))
+
+            fx_shifted = fx - fx.min() + np.finfo(float).eps
+
+            fitness = 1.0 / fx_shifted
+            probability = fitness / fitness.sum()
+
+            cumulativeP = np.cumsum(probability)
+
+            selected = np.zeros_like(x)
+
+            for i in range(self.C):
+
+                r = np.random.rand()
+
+                idx = np.searchsorted(
+                    cumulativeP,
+                    r
+                )
+
+                idx = min(idx, self.C - 1)
+
+                selected[i] = x[idx]
+
+            range_ *= self.R
+
+            newLB = np.clip(
+                selected - range_/2,
+                self.lb,
+                self.ub
+            )
+
+            newUB = np.clip(
+                selected + range_/2,
+                self.lb,
+                self.ub
+            )
+
+            x = newLB + np.random.rand(
+                self.C,
+                self.n
+            ) * (newUB - newLB)
+
+        fx = np.array(
+            [self.evaluate(candidate) for candidate in x]
+        )
+
+        best_idx = np.argmin(fx)
+
+        return (
+            x[best_idx],
+            fx[best_idx],
+            np.array(history)
+        )
